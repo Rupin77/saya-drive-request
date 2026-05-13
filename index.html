@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAYA Drive Request</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F2ED; --surface: #FFFFFF; --surface2: #F0EDE8; --border: #E2DDD7;
+    --text: #1A1714; --text-muted: #6B6560;
+    --accent: #1E4B3C; --accent-light: #E8F0EC;
+    --accent2: #C8502A; --accent2-light: #FAEEE9;
+    --yes: #1E7A4F; --yes-bg: #E6F5ED;
+    --no: #B23A2A; --no-bg: #FBEDEA;
+    --maybe: #7A5C1E; --maybe-bg: #F5EEDF;
+    --radius: 10px; --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* CONFIG BANNER */
+  #configBanner {
+    background:#7C3AED; color:white; padding:10px 20px; font-size:13px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  }
+  #configBanner input {
+    flex:1; min-width:260px; max-width:520px; padding:6px 10px; border-radius:6px;
+    border:none; font-size:13px; font-family:'DM Sans',sans-serif; color:#1A1714; outline:none;
+  }
+  #configBanner button {
+    padding:6px 14px; background:white; color:#7C3AED; border:none; border-radius:6px;
+    font-size:13px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; white-space:nowrap;
+  }
+
+  /* HEADER */
+  .header {
+    background:var(--accent); color:white; padding:16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.15);
+  }
+  .header-left { display:flex; align-items:center; gap:14px; }
+  .header-icon { width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; }
+  .header h1 { font-family:'Syne',sans-serif; font-size:19px; font-weight:800; letter-spacing:-0.3px; }
+  .header p { font-size:12px; opacity:0.7; margin-top:1px; }
+  .header-btns { display:flex; gap:8px; }
+
+  /* TABS */
+  .tabs-bar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 28px; display:flex; overflow-x:auto; scrollbar-width:none; }
+  .tabs-bar::-webkit-scrollbar { display:none; }
+  .tab-btn { padding:13px 18px; font-size:13px; font-weight:500; color:var(--text-muted); background:none; border:none; border-bottom:2.5px solid transparent; cursor:pointer; white-space:nowrap; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
+  .tab-btn:hover { color:var(--text); }
+  .tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+
+  /* MAIN */
+  .main { padding:22px 28px; max-width:1400px; margin:0 auto; }
+
+  /* LOADING */
+  .loading-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 20px; gap:16px; color:var(--text-muted); }
+  .spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* SESSION CARD */
+  .session-card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:18px 22px; margin-bottom:18px; box-shadow:var(--shadow); }
+  .session-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .session-field label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); display:block; margin-bottom:4px; }
+  .session-field input { width:100%; padding:7px 11px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:'DM Sans',sans-serif; background:var(--surface); color:var(--text); transition:border-color 0.15s; outline:none; }
+  .session-field input:focus { border-color:var(--accent); }
+  .deadline-note { font-size:11px; color:var(--accent2); font-weight:500; margin-top:10px; }
+
+  /* STATS */
+  .stats-row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .stat-chip { padding:5px 11px; border-radius:20px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:4px; }
+  .stat-total { background:var(--surface); border:1.5px solid var(--border); color:var(--text-muted); }
+  .stat-yes { background:var(--yes-bg); color:var(--yes); }
+  .stat-no { background:var(--no-bg); color:var(--no); }
+  .stat-maybe { background:var(--maybe-bg); color:var(--maybe); }
+  .stat-drive { background:var(--accent-light); color:var(--accent); }
+
+  /* ACTION BAR */
+  .action-bar { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+  .btn { padding:8px 15px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; display:flex; align-items:center; gap:5px; transition:all 0.15s; font-family:'DM Sans',sans-serif; white-space:nowrap; }
+  .btn-primary { background:var(--accent); color:white; }
+  .btn-primary:hover { background:#163829; }
+  .btn-secondary { background:var(--surface); color:var(--text); border:1.5px solid var(--border); }
+  .btn-secondary:hover { background:var(--surface2); }
+  .btn-danger { background:var(--no-bg); color:var(--no); border:1.5px solid #f0c4be; }
+  .btn-danger:hover { background:#f5d5d0; }
+  .btn-ghost { background:rgba(255,255,255,0.15); color:white; border:1.5px solid rgba(255,255,255,0.3); }
+  .btn-ghost:hover { background:rgba(255,255,255,0.25); }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .filter-group { display:flex; gap:8px; align-items:center; margin-left:auto; flex-wrap:wrap; }
+  .filter-select { padding:7px 11px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:'DM Sans',sans-serif; background:var(--surface); color:var(--text); cursor:pointer; outline:none; }
+  .filter-select:focus { border-color:var(--accent); }
+
+  /* MENTOR SECTIONS */
+  .mentor-section { margin-bottom:22px; }
+  .mentor-header { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+  .mentor-avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:white; flex-shrink:0; }
+  .mentor-name { font-family:'Syne',sans-serif; font-size:14px; font-weight:700; }
+  .mentor-count { font-size:11px; color:var(--text-muted); font-weight:500; background:var(--surface2); padding:2px 8px; border-radius:10px; }
+
+  /* TABLE */
+  .youth-table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); overflow-x:auto; }
+  .youth-table { width:100%; border-collapse:collapse; }
+  .youth-table th { background:var(--surface2); padding:9px 13px; text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); border-bottom:1px solid var(--border); white-space:nowrap; }
+  .youth-table td { padding:10px 13px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:top; }
+  .youth-table tr:last-child td { border-bottom:none; }
+  .youth-table tr:hover td { background:var(--surface2); }
+  .highlight-drive td { background:#f0f8f4 !important; }
+  .highlight-drive:hover td { background:#e4f3ec !important; }
+
+  .name-cell { font-weight:600; }
+  .name-cell .phone { font-size:12px; color:var(--text-muted); font-weight:400; margin-top:2px; }
+  .address-cell { max-width:180px; font-size:12px; line-height:1.4; color:var(--text-muted); }
+  .notes-cell { max-width:200px; font-size:12px; line-height:1.5; }
+
+  .attending-badge { display:inline-flex; align-items:center; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700; }
+  .att-yes { background:var(--yes-bg); color:var(--yes); }
+  .att-no { background:var(--no-bg); color:var(--no); }
+  .att-maybe { background:var(--maybe-bg); color:var(--maybe); }
+  .att-empty { background:var(--surface2); color:var(--text-muted); }
+  .drive-badge { display:inline-flex; align-items:center; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+  .drive-yes { background:var(--accent-light); color:var(--accent); }
+  .drive-no { background:var(--surface2); color:var(--text-muted); }
+
+  .tag { display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
+  .tag-rsg { background:#E8F0FB; color:#2B5AAD; }
+  .tag-vysa { background:#F5E8FB; color:#8B2BAD; }
+  .tag-cic { background:#FBF0E8; color:#AD682B; }
+  .tag-ongoing { background:#E8FBF3; color:#2BAD72; }
+  .tag-closed { background:#F0F0F0; color:#888; }
+
+  .edit-row-btn { background:none; border:1.5px solid var(--border); border-radius:6px; padding:4px 9px; font-size:11px; cursor:pointer; color:var(--text-muted); font-family:'DM Sans',sans-serif; font-weight:500; transition:all 0.15s; }
+  .edit-row-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-light); }
+  .td-select { padding:4px 7px; border:1.5px solid var(--border); border-radius:6px; font-size:12px; font-family:'DM Sans',sans-serif; background:var(--surface); color:var(--text); cursor:pointer; outline:none; }
+  .td-select:focus { border-color:var(--accent); }
+
+  /* MODALS */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .modal-overlay.hidden { display:none; }
+  .modal { background:var(--surface); border-radius:14px; padding:26px; width:100%; max-width:680px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
+  .modal h2 { font-family:'Syne',sans-serif; font-size:19px; font-weight:800; margin-bottom:18px; letter-spacing:-0.3px; }
+
+  /* FORMS */
+  .form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:11px; margin-bottom:12px; }
+  .form-field { display:flex; flex-direction:column; gap:4px; }
+  .form-field label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); }
+  .form-field input, .form-field select, .form-field textarea { padding:7px 11px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:'DM Sans',sans-serif; background:var(--surface); color:var(--text); transition:border-color 0.15s; outline:none; resize:none; }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color:var(--accent); }
+  .span2 { grid-column:span 2; }
+
+  /* SUMMARY */
+  .summary-text { font-size:12px; line-height:1.7; white-space:pre-wrap; font-family:monospace; background:var(--surface2); border-radius:8px; padding:14px; max-height:320px; overflow-y:auto; }
+
+  /* TOAST */
+  #toast { position:fixed; bottom:24px; right:24px; background:#1A1714; color:white; padding:10px 18px; border-radius:10px; font-size:13px; font-weight:500; z-index:9999; transition:all 0.25s; opacity:0; transform:translateY(8px); pointer-events:none; }
+  #toast.show { opacity:1; transform:translateY(0); }
+  #toast.error { background:var(--no); }
+  #toast.success { background:var(--yes); }
+
+  /* SAVING INDICATOR */
+  .saving-indicator { position:fixed; top:70px; right:20px; background:white; border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:12px; font-weight:500; color:var(--text-muted); display:flex; align-items:center; gap:7px; box-shadow:var(--shadow); z-index:500; transition:opacity 0.3s; opacity:0; pointer-events:none; }
+  .saving-indicator.show { opacity:1; }
+  .saving-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* EMPTY */
+  .empty-state { text-align:center; padding:40px 20px; color:var(--text-muted); }
+  .empty-state .icon { font-size:34px; margin-bottom:10px; }
+
+  @media(max-width:768px) {
+    .main { padding:14px; } .tabs-bar { padding:0 14px; } .header { padding:12px 16px; }
+    .session-grid { grid-template-columns:1fr 1fr; } .form-grid { grid-template-columns:1fr; }
+    .span2 { grid-column:span 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Config Banner -->
+<div id="configBanner">
+  <span>⚙️ Paste your Google Apps Script URL to connect your database:</span>
+  <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec" />
+  <button onclick="saveApiUrl()">Connect</button>
+</div>
+
+<header class="header">
+  <div class="header-left">
+    <div class="header-icon">🚗</div>
+    <div>
+      <h1>SAYA Drive Requests</h1>
+      <p id="headerSubtitle">Transportation coordination for youth sessions</p>
+    </div>
+  </div>
+  <div class="header-btns">
+    <button class="btn btn-ghost" onclick="generateSummary()">📋 Export</button>
+    <button class="btn btn-ghost" onclick="window.print()">🖨 Print</button>
+  </div>
+</header>
+
+<div class="tabs-bar" id="tabsBar">
+  <button class="tab-btn active">Loading...</button>
+</div>
+
+<div class="main" id="mainContent">
+  <div class="loading-screen">
+    <div class="spinner"></div>
+    <p>Connecting to your database…</p>
+    <p style="font-size:12px;margin-top:4px;">Paste your Apps Script URL above to get started.</p>
+  </div>
+</div>
+
+<!-- Saving indicator -->
+<div class="saving-indicator" id="savingIndicator">
+  <div class="saving-dot"></div>
+  <span id="savingText">Saving…</span>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Edit Youth Modal -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <h2 id="editModalTitle">✏️ Edit Youth</h2>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Mentor Section</label>
+        <select id="em_mentor"></select>
+      </div>
+      <div class="form-field"><label>Youth Name *</label><input id="em_name" type="text"></div>
+      <div class="form-field"><label>Phone Number</label><input id="em_phone" type="text"></div>
+      <div class="form-field"><label>Date of Birth</label><input id="em_dob" type="text" placeholder="DD/MM/YYYY"></div>
+      <div class="form-field"><label>Social Worker</label><input id="em_sw" type="text"></div>
+      <div class="form-field">
+        <label>Case Type</label>
+        <select id="em_case">
+          <option value="">—</option>
+          <option value="RSG">RSG</option><option value="VYSA">VYSA</option>
+          <option value="CIC">CIC</option><option value="ONGOING">ONGOING</option>
+          <option value="Investigation">Investigation</option><option value="CLOSED FILE">CLOSED FILE</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Caregiver Name</label><input id="em_cg" type="text"></div>
+      <div class="form-field"><label>Caregiver Relation</label><input id="em_cgrel" type="text"></div>
+      <div class="form-field"><label>Caregiver Phone</label><input id="em_cgphone" type="text"></div>
+      <div class="form-field span2"><label>Pickup Address</label><input id="em_addr" type="text"></div>
+      <div class="form-field">
+        <label>Attending?</label>
+        <select id="em_att">
+          <option value="">— Pending</option>
+          <option value="YES">✓ Yes</option><option value="NO">✗ No</option><option value="MAYBE">? Maybe</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Needs Drive?</label>
+        <select id="em_drive">
+          <option value="">— Unknown</option><option value="YES">Yes</option><option value="NO">No</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Drive Type</label>
+        <select id="em_drivetype">
+          <option value="">—</option>
+          <option value="Round Trip">Round Trip</option>
+          <option value="One Way (To Session)">One Way (To Session)</option>
+          <option value="One Way (Home)">One Way (Home)</option>
+        </select>
+      </div>
+      <div class="form-field span2"><label>Drop-off Address (if different)</label><input id="em_dropoff" type="text"></div>
+      <div class="form-field"><label>Allergies</label><input id="em_allergy" type="text"></div>
+      <div class="form-field"><label>Dietary Restrictions</label><input id="em_dietary" type="text"></div>
+    </div>
+    <div class="form-field" style="margin-bottom:18px;">
+      <label>Notes for Driver</label>
+      <textarea id="em_notes" rows="3"></textarea>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <button class="btn btn-danger" onclick="confirmDelete()" id="deleteBtn">🗑 Remove Youth</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-primary" id="saveEditBtn" onclick="saveEditYouth()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal" style="max-width:400px;text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🗑️</div>
+    <h2>Remove Youth?</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin:10px 0 22px;" id="deleteModalName"></p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDelete()">Yes, Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Youth Modal -->
+<div class="modal-overlay hidden" id="addModal">
+  <div class="modal">
+    <h2>+ Add New Youth</h2>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Mentor Section</label>
+        <select id="ny_mentor"></select>
+      </div>
+      <div class="form-field"><label>Youth Name *</label><input id="ny_name" type="text" placeholder="Full name"></div>
+      <div class="form-field"><label>Phone Number</label><input id="ny_phone" type="text"></div>
+      <div class="form-field"><label>Date of Birth</label><input id="ny_dob" type="text" placeholder="DD/MM/YYYY"></div>
+      <div class="form-field"><label>Social Worker</label><input id="ny_sw" type="text"></div>
+      <div class="form-field">
+        <label>Case Type</label>
+        <select id="ny_case">
+          <option value="">—</option>
+          <option value="RSG">RSG</option><option value="VYSA">VYSA</option>
+          <option value="CIC">CIC</option><option value="ONGOING">ONGOING</option>
+          <option value="Investigation">Investigation</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Caregiver Name</label><input id="ny_cg" type="text"></div>
+      <div class="form-field"><label>Caregiver Relation</label><input id="ny_cgrel" type="text" placeholder="e.g. Foster Parent"></div>
+      <div class="form-field"><label>Caregiver Phone</label><input id="ny_cgphone" type="text"></div>
+      <div class="form-field span2"><label>Pickup Address</label><input id="ny_addr" type="text"></div>
+      <div class="form-field">
+        <label>Attending?</label>
+        <select id="ny_att">
+          <option value="">— Pending</option>
+          <option value="YES">✓ Yes</option><option value="NO">✗ No</option><option value="MAYBE">? Maybe</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Needs Drive?</label>
+        <select id="ny_drive">
+          <option value="">— Unknown</option><option value="YES">Yes</option><option value="NO">No</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Drive Type</label>
+        <select id="ny_drivetype">
+          <option value="">—</option>
+          <option value="Round Trip">Round Trip</option>
+          <option value="One Way (To Session)">One Way (To Session)</option>
+          <option value="One Way (Home)">One Way (Home)</option>
+        </select>
+      </div>
+      <div class="form-field span2"><label>Drop-off Address (if different)</label><input id="ny_dropoff" type="text"></div>
+      <div class="form-field"><label>Allergies</label><input id="ny_allergy" type="text"></div>
+      <div class="form-field"><label>Dietary Restrictions</label><input id="ny_dietary" type="text"></div>
+    </div>
+    <div class="form-field" style="margin-bottom:18px;">
+      <label>Notes for Driver</label>
+      <textarea id="ny_notes" rows="2"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveAddBtn" onclick="saveNewYouth()">Add Youth</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Session Modal -->
+<div class="modal-overlay hidden" id="addSessionModal">
+  <div class="modal" style="max-width:480px;">
+    <h2>+ New Session</h2>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="form-field span2"><label>Session Label *</label><input id="ns_label" type="text" placeholder="e.g. May 2026"></div>
+      <div class="form-field span2"><label>Date</label><input id="ns_date" type="text" placeholder="e.g. Tuesday, May 12, 2026"></div>
+      <div class="form-field span2"><label>Location</label><input id="ns_location" type="text" placeholder="Full address"></div>
+      <div class="form-field"><label>Lead Mentor(s)</label><input id="ns_mentor" type="text"></div>
+      <div class="form-field"><label>Mentor Phone</label><input id="ns_phone" type="text"></div>
+      <div class="form-field"><label>Start Time</label><input id="ns_start" type="text" placeholder="5:20PM"></div>
+      <div class="form-field"><label>End Time</label><input id="ns_end" type="text" placeholder="7:45PM"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px;">Youth from the current session will be copied over with blank attendance. You can also start fresh.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeAddSessionModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveSessionBtn" onclick="saveNewSession()">Create Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Modal -->
+<div class="modal-overlay hidden" id="summaryModal">
+  <div class="modal">
+    <h2>📋 Drive Request Summary</h2>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px;">Copy this to send to the drive coordination team.</p>
+    <div class="summary-text" id="summaryText"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-secondary" onclick="copyToClipboard()">📋 Copy</button>
+      <button class="btn btn-primary" onclick="document.getElementById('summaryModal').classList.add('hidden')">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────
+const MENTOR_COLORS = { Wendy:'#6B7280', Pardip:'#7C3AED', Simran:'#DB2777', Artie:'#D97706', Hamaad:'#059669', Hamin:'#2563EB', Kanthi:'#DC2626' };
+const CONFIG_KEY = 'saya_api_url';
+
+let API_URL = localStorage.getItem(CONFIG_KEY) || '';
+let sessions = [];
+let allYouth  = [];
+let currentSessionId = null;
+let filterMentor = 'all';
+let filterStatus  = 'all';
+let editingYouth  = null;
+
+// ─── INIT ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (API_URL) {
+    document.getElementById('apiUrlInput').value = API_URL;
+    hideBanner();
+    loadData();
+  }
+  // Close modals on backdrop click
+  ['editModal','deleteModal','addModal','addSessionModal','summaryModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) document.getElementById(id).classList.add('hidden'); });
+  });
+});
+
+function saveApiUrl() {
+  const val = document.getElementById('apiUrlInput').value.trim();
+  if (!val || !val.startsWith('http')) { showToast('Please paste a valid URL', 'error'); return; }
+  API_URL = val;
+  localStorage.setItem(CONFIG_KEY, API_URL);
+  hideBanner();
+  loadData();
+}
+
+function hideBanner() { document.getElementById('configBanner').style.display = 'none'; }
+
+// ─── API CALLS ───────────────────────────────────────────────
+async function apiFetch(params) {
+  const url = API_URL + '?' + new URLSearchParams(params);
+  const res = await fetch(url);
+  const text = await res.text();
+  const data = JSON.parse(text);
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+// Google Apps Script is most reliable when writes are also sent as GET
+// with the payload encoded as a URL parameter. This avoids CORS preflight
+// issues that come with POST + Content-Type: application/json.
+async function apiPost(body) {
+  const url = API_URL + '?' + new URLSearchParams({ payload: JSON.stringify(body) });
+  const res = await fetch(url);
+  const text = await res.text();
+  const data = JSON.parse(text);
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+async function loadData() {
+  showLoading();
+  try {
+    const data = await apiFetch({ action: 'getAll' });
+    sessions  = data.sessions  || [];
+    allYouth  = data.youth     || [];
+    if (sessions.length > 0) currentSessionId = sessions[sessions.length - 1].sessionId;
+    renderTabs();
+    render();
+  } catch (err) {
+    showError('Could not load data: ' + err.message);
+  }
+}
+
+// ─── SAVING ──────────────────────────────────────────────────
+function showSaving(text = 'Saving…') {
+  document.getElementById('savingText').textContent = text;
+  document.getElementById('savingIndicator').classList.add('show');
+}
+function hideSaving() { setTimeout(() => document.getElementById('savingIndicator').classList.remove('show'), 800); }
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ─── RENDER ──────────────────────────────────────────────────
+function showLoading() {
+  document.getElementById('mainContent').innerHTML = `<div class="loading-screen"><div class="spinner"></div><p>Loading data…</p></div>`;
+}
+
+function showError(msg) {
+  document.getElementById('mainContent').innerHTML = `<div class="loading-screen"><div style="font-size:32px">⚠️</div><p style="color:var(--no)">${msg}</p><button class="btn btn-secondary" onclick="loadData()" style="margin-top:12px">Retry</button></div>`;
+}
+
+function getSession() { return sessions.find(s => s.sessionId === currentSessionId); }
+
+function getSessionYouth() { return allYouth.filter(y => y.sessionId === currentSessionId); }
+
+function normalizeAtt(v) { if (!v) return ''; v = v.trim().toUpperCase(); return (v==='YES'||v==='Y')?'YES':(v==='NO'||v==='N')?'NO':v==='MAYBE'?'MAYBE':v; }
+function normalizeDrv(v) { if (!v) return ''; v = v.trim().toUpperCase(); return (v==='YES'||v==='Y')?'YES':(v==='NO'||v==='N')?'NO':v; }
+
+function getMentors() { return [...new Set(getSessionYouth().map(y => y.mentor))]; }
+
+function renderTabs() {
+  document.getElementById('tabsBar').innerHTML =
+    sessions.map(s => `<button class="tab-btn ${s.sessionId===currentSessionId?'active':''}" onclick="switchSession('${s.sessionId}')">${s.label}</button>`).join('') +
+    `<button class="tab-btn" onclick="openAddSessionModal()">+ New Session</button>`;
+}
+
+function switchSession(id) { currentSessionId = id; filterMentor = 'all'; filterStatus = 'all'; renderTabs(); render(); }
+
+function getCaseTag(t) {
+  if (!t) return '';
+  const u = t.trim().toUpperCase();
+  if (u==='RSG') return '<span class="tag tag-rsg">RSG</span>';
+  if (u==='VYSA') return '<span class="tag tag-vysa">VYSA</span>';
+  if (u==='CIC') return '<span class="tag tag-cic">CIC</span>';
+  if (u==='ONGOING') return '<span class="tag tag-ongoing">ONGOING</span>';
+  if (u.includes('CLOSED')) return '<span class="tag tag-closed">CLOSED</span>';
+  if (u==='INVESTIGATION') return '<span class="tag" style="background:#FFF0E8;color:#AD4E2B;">INV</span>';
+  return `<span class="tag" style="background:var(--surface2);color:var(--text-muted);">${t}</span>`;
+}
+
+function render() {
+  const session = getSession();
+  if (!session) { document.getElementById('mainContent').innerHTML = '<div class="empty-state"><p>No sessions found.</p></div>'; return; }
+
+  const youth = getSessionYouth();
+  const filtered = youth.filter(y => {
+    if (filterMentor !== 'all' && y.mentor !== filterMentor) return false;
+    if (filterStatus === 'yes' && normalizeAtt(y.attending) !== 'YES') return false;
+    if (filterStatus === 'no'  && normalizeAtt(y.attending) !== 'NO')  return false;
+    if (filterStatus === 'maybe' && normalizeAtt(y.attending) !== 'MAYBE') return false;
+    if (filterStatus === 'pending' && normalizeAtt(y.attending) !== '') return false;
+    if (filterStatus === 'drive' && normalizeDrv(y.needsDrive) !== 'YES') return false;
+    return true;
+  });
+
+  const yes = youth.filter(y => normalizeAtt(y.attending)==='YES').length;
+  const no  = youth.filter(y => normalizeAtt(y.attending)==='NO').length;
+  const maybe = youth.filter(y => normalizeAtt(y.attending)==='MAYBE').length;
+  const drives = youth.filter(y => normalizeDrv(y.needsDrive)==='YES').length;
+
+  const mentors = getMentors();
+  const mentorOpts = ['all',...mentors].map(m => `<option value="${m}" ${filterMentor===m?'selected':''}>${m==='all'?'All Mentors':m}</option>`).join('');
+  const statusOpts = [
+    {v:'all',l:'All Status'},{v:'yes',l:'✓ Attending'},{v:'no',l:'✗ Not Attending'},
+    {v:'maybe',l:'? Maybe'},{v:'pending',l:'— Pending'},{v:'drive',l:'🚗 Needs Drive'}
+  ].map(o=>`<option value="${o.v}" ${filterStatus===o.v?'selected':''}>${o.l}</option>`).join('');
+
+  // Group by mentor
+  const grouped = {};
+  filtered.forEach(y => { if (!grouped[y.mentor]) grouped[y.mentor]=[]; grouped[y.mentor].push(y); });
+
+  let sections = Object.entries(grouped).map(([mentor, list]) => {
+    const color = MENTOR_COLORS[mentor] || '#6B7280';
+    const driveCount = list.filter(y => normalizeDrv(y.needsDrive)==='YES').length;
+    const rows = list.map(y => {
+      const drClass = normalizeDrv(y.needsDrive)==='YES' ? 'highlight-drive' : '';
+      const attBadge = {YES:'<span class="attending-badge att-yes">✓ YES</span>',NO:'<span class="attending-badge att-no">✗ NO</span>',MAYBE:'<span class="attending-badge att-maybe">? MAYBE</span>'}[normalizeAtt(y.attending)] || '<span class="attending-badge att-empty">—</span>';
+      const drvBadge = normalizeDrv(y.needsDrive)==='YES' ? '<span class="drive-badge drive-yes">🚗 Yes</span>' : '<span class="drive-badge drive-no">—</span>';
+      const dietary = [y.dietary, y.allergy?`⚠️ ${y.allergy}`:''].filter(Boolean).join(' · ');
+      const cg = (y.caregiver && !['n/a','na',''].includes(y.caregiver.toLowerCase())) ? `<strong>${y.caregiver}</strong>${y.caregiverRel?`<br><span style="color:var(--text-muted)">${y.caregiverRel}</span>`:''}${y.caregiverPhone&&!['n/a','na','contact youth directly'].includes(y.caregiverPhone.toLowerCase())?`<br>${y.caregiverPhone}`:''}` : '—';
+      return `<tr class="${drClass}">
+        <td class="name-cell">${y.name}<br><span class="phone">${y.phone||'—'}</span></td>
+        <td style="font-size:12px">${y.socialWorker||'—'}</td>
+        <td>${getCaseTag(y.caseType)}</td>
+        <td style="font-size:12px">${cg}</td>
+        <td class="address-cell">${y.address||'—'}</td>
+        <td>
+          <select class="td-select" onchange="quickUpdate('${y.rowId}','attending',this.value)">
+            <option value="" ${!y.attending?'selected':''}>— Pending</option>
+            <option value="YES" ${normalizeAtt(y.attending)==='YES'?'selected':''}>✓ Yes</option>
+            <option value="NO"  ${normalizeAtt(y.attending)==='NO' ?'selected':''}>✗ No</option>
+            <option value="MAYBE" ${normalizeAtt(y.attending)==='MAYBE'?'selected':''}>? Maybe</option>
+          </select>
+        </td>
+        <td>
+          <select class="td-select" onchange="quickUpdate('${y.rowId}','needsDrive',this.value)">
+            <option value="" ${!y.needsDrive?'selected':''}>—</option>
+            <option value="YES" ${normalizeDrv(y.needsDrive)==='YES'?'selected':''}>🚗 Yes</option>
+            <option value="NO"  ${normalizeDrv(y.needsDrive)==='NO' ?'selected':''}>No</option>
+          </select>
+        </td>
+        <td style="font-size:12px">${y.driveType||'—'}</td>
+        <td class="address-cell">${y.dropOff||'—'}</td>
+        <td style="font-size:12px">${dietary||'—'}</td>
+        <td class="notes-cell">${y.notes||'—'}</td>
+        <td><button class="edit-row-btn" onclick="openEditModal('${y.rowId}')">✏️ Edit</button></td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="mentor-section">
+      <div class="mentor-header">
+        <div class="mentor-avatar" style="background:${color}">${mentor.slice(0,2).toUpperCase()}</div>
+        <span class="mentor-name">${mentor}'s Youth</span>
+        <span class="mentor-count">${list.length} youth${driveCount>0?` · 🚗 ${driveCount} drives`:''}</span>
+      </div>
+      <div class="youth-table-wrap">
+        <table class="youth-table">
+          <thead><tr>
+            <th>Youth</th><th>Social Worker</th><th>Case</th><th>Caregiver</th>
+            <th>Pickup Address</th><th>Attending</th><th>Needs Drive</th>
+            <th>Drive Type</th><th>Drop-off</th><th>Dietary/Allergy</th><th>Notes</th><th>Actions</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (!sections) sections = `<div class="empty-state"><div class="icon">🔍</div><p>No youth match the current filters.</p></div>`;
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="session-card">
+      <div class="session-grid">
+        <div class="session-field"><label>Date of Session</label><input type="text" value="${session.date||''}" onchange="updateSessionField('date',this.value)"></div>
+        <div class="session-field"><label>Location</label><input type="text" value="${session.location||''}" onchange="updateSessionField('location',this.value)"></div>
+        <div class="session-field"><label>Lead Mentor(s)</label><input type="text" value="${session.mentor||''}" onchange="updateSessionField('mentor',this.value)"></div>
+        <div class="session-field"><label>Mentor Phone</label><input type="text" value="${session.mentorPhone||''}" onchange="updateSessionField('mentorPhone',this.value)"></div>
+        <div class="session-field"><label>Start Time</label><input type="text" value="${session.startTime||''}" onchange="updateSessionField('startTime',this.value)"></div>
+        <div class="session-field"><label>End Time</label><input type="text" value="${session.endTime||''}" onchange="updateSessionField('endTime',this.value)"></div>
+      </div>
+      <p class="deadline-note">⚠️ Drive requests are due back to Amanda 6 business days before the session.</p>
+    </div>
+    <div class="stats-row">
+      <div class="stat-chip stat-total">👥 ${youth.length} Total</div>
+      <div class="stat-chip stat-yes">✓ ${yes} Attending</div>
+      <div class="stat-chip stat-no">✗ ${no} Not Attending</div>
+      ${maybe>0?`<div class="stat-chip stat-maybe">? ${maybe} Maybe</div>`:''}
+      <div class="stat-chip stat-drive">🚗 ${drives} Need Drives</div>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Youth</button>
+      <div class="filter-group">
+        <select class="filter-select" onchange="filterMentor=this.value;render()">${mentorOpts}</select>
+        <select class="filter-select" onchange="filterStatus=this.value;render()">${statusOpts}</select>
+        <button class="btn btn-secondary" onclick="generateSummary()">📋 Export Summary</button>
+      </div>
+    </div>
+    ${sections}
+  `;
+}
+
+// ─── QUICK UPDATE (Attending / Drive dropdowns in table) ─────
+async function quickUpdate(rowId, field, value) {
+  const youth = allYouth.find(y => y.rowId === rowId);
+  if (!youth) return;
+  youth[field] = value;
+  render(); // re-render immediately so stats update
+  showSaving();
+  try {
+    await apiPost({ action: 'updateYouth', youth });
+    hideSaving();
+  } catch (err) {
+    showToast('Save failed: ' + err.message, 'error');
+    hideSaving();
+  }
+}
+
+// ─── SESSION UPDATES ─────────────────────────────────────────
+let sessionSaveTimer = null;
+function updateSessionField(field, value) {
+  const session = getSession();
+  if (!session) return;
+  session[field] = value;
+  clearTimeout(sessionSaveTimer);
+  sessionSaveTimer = setTimeout(async () => {
+    showSaving('Saving session…');
+    try { await apiPost({ action: 'updateSession', session }); hideSaving(); }
+    catch (err) { showToast('Session save failed: ' + err.message, 'error'); hideSaving(); }
+  }, 800);
+}
+
+// ─── EDIT MODAL ───────────────────────────────────────────────
+function openEditModal(rowId) {
+  const y = allYouth.find(y => y.rowId === rowId);
+  if (!y) return;
+  editingYouth = y;
+
+  const mentors = getMentors();
+  const sel = document.getElementById('em_mentor');
+  sel.innerHTML = mentors.map(m => `<option value="${m}" ${m===y.mentor?'selected':''}>${m}</option>`).join('') + `<option value="__new__">+ New mentor…</option>`;
+
+  ['name','phone','dob','sw','cg','cgrel','cgphone','addr','att','drive','drivetype','dropoff','allergy','dietary','notes'].forEach(f => {
+    const el = document.getElementById('em_' + f);
+    const key = {sw:'socialWorker',cg:'caregiver',cgrel:'caregiverRel',cgphone:'caregiverPhone',addr:'address',att:'attending',drive:'needsDrive',drivetype:'driveType',dropoff:'dropOff'}[f] || f;
+    if (el) el.value = (key==='attending'?normalizeAtt(y[key]):key==='needsDrive'?normalizeDrv(y[key]):y[key]) || '';
+  });
+
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); editingYouth = null; }
+
+async function saveEditYouth() {
+  if (!editingYouth) return;
+  const name = document.getElementById('em_name').value.trim();
+  if (!name) { showToast('Youth name is required', 'error'); return; }
+
+  let mentor = document.getElementById('em_mentor').value;
+  if (mentor === '__new__') { mentor = prompt('New mentor name:')?.trim(); if (!mentor) return; }
+
+  const y = editingYouth;
+  y.mentor = mentor; y.name = name;
+  y.phone = document.getElementById('em_phone').value.trim();
+  y.dob = document.getElementById('em_dob').value.trim();
+  y.socialWorker = document.getElementById('em_sw').value.trim();
+  y.caseType = document.getElementById('em_case').value;
+  y.caregiver = document.getElementById('em_cg').value.trim();
+  y.caregiverRel = document.getElementById('em_cgrel').value.trim();
+  y.caregiverPhone = document.getElementById('em_cgphone').value.trim();
+  y.address = document.getElementById('em_addr').value.trim();
+  y.attending = document.getElementById('em_att').value;
+  y.needsDrive = document.getElementById('em_drive').value;
+  y.driveType = document.getElementById('em_drivetype').value;
+  y.dropOff = document.getElementById('em_dropoff').value.trim();
+  y.allergy = document.getElementById('em_allergy').value.trim();
+  y.dietary = document.getElementById('em_dietary').value.trim();
+  y.notes = document.getElementById('em_notes').value.trim();
+
+  const btn = document.getElementById('saveEditBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  showSaving();
+  try {
+    await apiPost({ action: 'updateYouth', youth: y });
+    closeEditModal();
+    render();
+    showToast('✅ Changes saved!', 'success');
+  } catch (err) {
+    showToast('Save failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    hideSaving();
+  }
+}
+
+// ─── DELETE ───────────────────────────────────────────────────
+function confirmDelete() {
+  if (!editingYouth) return;
+  document.getElementById('deleteModalName').textContent = `Remove "${editingYouth.name}" from this session?`;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
+
+async function executeDelete() {
+  if (!editingYouth) return;
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true; btn.textContent = 'Removing…';
+  showSaving('Removing…');
+  try {
+    await apiPost({ action: 'deleteYouth', rowId: editingYouth.rowId });
+    allYouth = allYouth.filter(y => y.rowId !== editingYouth.rowId);
+    closeDeleteModal(); closeEditModal();
+    render();
+    showToast('Youth removed', 'success');
+  } catch (err) {
+    showToast('Delete failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Yes, Remove';
+    hideSaving();
+  }
+}
+
+// ─── ADD YOUTH ────────────────────────────────────────────────
+function openAddModal() {
+  const mentors = getMentors();
+  document.getElementById('ny_mentor').innerHTML = mentors.map(m=>`<option value="${m}">${m}</option>`).join('') + `<option value="__new__">+ New mentor…</option>`;
+  ['name','phone','dob','sw','cg','cgrel','cgphone','addr','allergy','dietary','notes'].forEach(f => { const el=document.getElementById('ny_'+f); if(el) el.value=''; });
+  ['att','drive','drivetype','dropoff'].forEach(f => { const el=document.getElementById('ny_'+f); if(el) el.value=''; });
+  document.getElementById('addModal').classList.remove('hidden');
+}
+function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
+
+async function saveNewYouth() {
+  const name = document.getElementById('ny_name').value.trim();
+  if (!name) { showToast('Youth name is required', 'error'); return; }
+  let mentor = document.getElementById('ny_mentor').value;
+  if (mentor === '__new__') { mentor = prompt('New mentor name:')?.trim(); if (!mentor) return; }
+
+  const youth = {
+    sessionId: currentSessionId, mentor, name,
+    phone: document.getElementById('ny_phone').value.trim(),
+    dob: document.getElementById('ny_dob').value.trim(),
+    socialWorker: document.getElementById('ny_sw').value.trim(),
+    caseType: document.getElementById('ny_case').value,
+    caregiver: document.getElementById('ny_cg').value.trim(),
+    caregiverRel: document.getElementById('ny_cgrel').value.trim(),
+    caregiverPhone: document.getElementById('ny_cgphone').value.trim(),
+    address: document.getElementById('ny_addr').value.trim(),
+    attending: document.getElementById('ny_att').value,
+    needsDrive: document.getElementById('ny_drive').value,
+    driveType: document.getElementById('ny_drivetype').value,
+    dropOff: document.getElementById('ny_dropoff').value.trim(),
+    allergy: document.getElementById('ny_allergy').value.trim(),
+    dietary: document.getElementById('ny_dietary').value.trim(),
+    notes: document.getElementById('ny_notes').value.trim(),
+  };
+
+  const btn = document.getElementById('saveAddBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  showSaving('Adding youth…');
+  try {
+    const result = await apiPost({ action: 'addYouth', youth });
+    youth.rowId = result.rowId;
+    allYouth.push(youth);
+    closeAddModal(); render();
+    showToast('✅ Youth added!', 'success');
+  } catch (err) {
+    showToast('Failed to add: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add Youth';
+    hideSaving();
+  }
+}
+
+// ─── ADD SESSION ──────────────────────────────────────────────
+function openAddSessionModal() { document.getElementById('addSessionModal').classList.remove('hidden'); }
+function closeAddSessionModal() { document.getElementById('addSessionModal').classList.add('hidden'); }
+
+async function saveNewSession() {
+  const label = document.getElementById('ns_label').value.trim();
+  if (!label) { showToast('Session label is required', 'error'); return; }
+
+  const session = {
+    label,
+    date: document.getElementById('ns_date').value.trim(),
+    location: document.getElementById('ns_location').value.trim(),
+    mentor: document.getElementById('ns_mentor').value.trim(),
+    mentorPhone: document.getElementById('ns_phone').value.trim(),
+    startTime: document.getElementById('ns_start').value.trim(),
+    endTime: document.getElementById('ns_end').value.trim(),
+  };
+
+  const btn = document.getElementById('saveSessionBtn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  showSaving('Creating session…');
+  try {
+    const result = await apiPost({ action: 'addSession', session });
+    session.sessionId = result.sessionId;
+    sessions.push(session);
+
+    // Copy current youth with blank attendance
+    const copyPromises = getSessionYouth().map(y => {
+      const copy = { ...y, sessionId: session.sessionId, rowId: undefined, attending: '', needsDrive: '', driveType: '', notes: '' };
+      return apiPost({ action: 'addYouth', youth: copy }).then(r => { copy.rowId = r.rowId; allYouth.push(copy); });
+    });
+    await Promise.all(copyPromises);
+
+    currentSessionId = session.sessionId;
+    closeAddSessionModal();
+    renderTabs(); render();
+    showToast('✅ Session created!', 'success');
+  } catch (err) {
+    showToast('Failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Session';
+    hideSaving();
+  }
+}
+
+// ─── EXPORT SUMMARY ───────────────────────────────────────────
+function generateSummary() {
+  const session = getSession();
+  const youth = getSessionYouth();
+  const attending = youth.filter(y => normalizeAtt(y.attending)==='YES');
+  const drives = attending.filter(y => normalizeDrv(y.needsDrive)==='YES');
+
+  let text = `SAYA DRIVE REQUEST SUMMARY\n${'='.repeat(50)}\n\n`;
+  text += `SESSION DATE: ${session.date||'TBD'}\n`;
+  text += `LOCATION: ${session.location||'TBD'}\n`;
+  text += `MENTOR(S): ${session.mentor||'TBD'} | ${session.mentorPhone||''}\n`;
+  text += `TIME: ${session.startTime||'TBD'} – ${session.endTime||'TBD'}\n\n`;
+  text += `ATTENDANCE\n${'-'.repeat(30)}\n`;
+  text += `Total: ${youth.length}  |  Attending: ${attending.length}  |  Need Drives: ${drives.length}\n\n`;
+
+  if (drives.length > 0) {
+    text += `DRIVE REQUESTS\n${'-'.repeat(30)}\n`;
+    drives.forEach((y, i) => {
+      text += `\n${i+1}. ${y.name}\n`;
+      text += `   Phone: ${y.phone||'N/A'}\n`;
+      text += `   Pickup: ${y.address||'N/A'}\n`;
+      if (y.dropOff && y.dropOff !== y.address) text += `   Drop-off: ${y.dropOff}\n`;
+      if (y.driveType) text += `   Drive Type: ${y.driveType}\n`;
+      if (y.dietary||y.allergy) text += `   Dietary/Allergy: ${[y.dietary,y.allergy].filter(Boolean).join(', ')}\n`;
+      const cg = y.caregiver && !['n/a','na'].includes(y.caregiver.toLowerCase());
+      if (cg) text += `   Caregiver: ${y.caregiver}${y.caregiverPhone?' ('+y.caregiverPhone+')':''}\n`;
+      if (y.notes) text += `   NOTES: ${y.notes}\n`;
+    });
+  }
+  text += `\n\n*DRIVE REQUESTS DUE 6 BUSINESS DAYS BEFORE SESSION*`;
+
+  document.getElementById('summaryText').textContent = text;
+  document.getElementById('summaryModal').classList.remove('hidden');
+}
+
+function copyToClipboard() {
+  navigator.clipboard.writeText(document.getElementById('summaryText').textContent)
+    .then(() => showToast('Copied!', 'success'))
+    .catch(() => showToast('Press Ctrl+C to copy', ''));
+}
+</script>
+</body>
+</html>
