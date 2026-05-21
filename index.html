@@ -339,8 +339,7 @@
 </div>
 
 <script>
-// ─── CONFIG — paste your 5 Power Automate URLs here ──────────
-// After following the setup guide, replace each null with your flow URL (a long https://prod-XX... link)
+
 const FLOWS = {
   getAll:        "https://default0fef7dd17066489a9a784bc4360381.f1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/62c2f01dfe354868900cd2ff5fcbfaba/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-fcHpVSMOv5j-pwSa9yqewGcwLqEfZ3k8iEd16KlvFw",
   addYouth:      "https://default0fef7dd17066489a9a784bc4360381.f1.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b4f7551f9c91401898ae92eddd89b6d3/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tVT3zMPYH1n1S-qMr4RVUpE8Qcl7qS2Nr5jiw04_zXo",
@@ -392,24 +391,87 @@ async function callFlow(flowKey, body = null) {
   const opts = body
     ? { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
     : { method:'GET' };
-  const res = await fetch(url, opts);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  let res;
+  try { res = await fetch(url, opts); }
+  catch(e) { throw new Error(`Network error on ${flowKey}: ${e.message}`); }
+
   const text = await res.text();
-  if (!text) return { success: true };
-  try { return JSON.parse(text); } catch { return { success: true }; }
+  if (!text || text.trim() === '') return { success: true };
+
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch { return { success: true }; }
+
+  // PA sometimes wraps everything in { body: {...} }
+  if (parsed && parsed.body && typeof parsed.body === 'object') {
+    return Object.assign({}, parsed.body, parsed);
+  }
+  return parsed;
 }
 
 async function loadData() {
   showLoading();
   try {
     const data = await callFlow('getAll');
-    sessions = data.sessions || [];
-    allYouth = data.youth || [];
-    if (sessions.length > 0) currentSessionId = sessions[sessions.length-1].sessionId;
-    renderTabs(); render();
+    console.log('Raw PA response:', JSON.stringify(data).slice(0, 500));
+
+    // Power Automate can return rows in several shapes — normalize them all
+    sessions = normalizeRows(data.sessions || data.Sessions || data.value || data.body?.value || []);
+    allYouth  = normalizeRows(data.youth   || data.Youth   || data.youth_value || []);
+
+    // If getAll returned nothing useful, try deeper nesting
+    if (sessions.length === 0 && allYouth.length === 0) {
+      const inner = data.body || data;
+      sessions = normalizeRows(inner.sessions || inner.Sessions || []);
+      allYouth  = normalizeRows(inner.youth   || inner.Youth   || []);
+    }
+
+    console.log(`Loaded ${sessions.length} sessions, ${allYouth.length} youth`);
+
+    if (sessions.length === 0) {
+      showError('No sessions found. Check your Get All Data flow — make sure the Response body contains {"sessions": ..., "youth": ...}. Open browser console (F12) for details.');
+      return;
+    }
+
+    currentSessionId = sessions[sessions.length - 1].sessionId;
+    renderTabs();
+    render();
   } catch(err) {
+    console.error('loadData error:', err);
     showError(err.message);
   }
+}
+
+// Power Automate wraps Excel rows in different ways depending on the flow setup.
+// This function handles all known shapes and returns a plain array of objects.
+function normalizeRows(input) {
+  if (!input) return [];
+  // Already a plain array of objects
+  if (Array.isArray(input)) {
+    return input.map(row => {
+      // PA sometimes nests values under a "columns" key
+      if (row.columns) return flattenObj(row.columns);
+      // PA sometimes uses @odata style with values nested
+      if (row['values']) return flattenObj(row['values']);
+      return flattenObj(row);
+    });
+  }
+  // Wrapped in { value: [...] }
+  if (input.value && Array.isArray(input.value)) return normalizeRows(input.value);
+  // Wrapped in { body: { value: [...] } }
+  if (input.body && input.body.value) return normalizeRows(input.body.value);
+  return [];
+}
+
+function flattenObj(obj) {
+  // Remove PA internal keys like @odata.etag, ItemInternalId etc.
+  const out = {};
+  Object.entries(obj).forEach(([k, v]) => {
+    if (k.startsWith('@') || k === 'ItemInternalId') return;
+    out[k] = v === null || v === undefined ? '' : String(v);
+  });
+  return out;
 }
 
 // ─── UI HELPERS ───────────────────────────────────────────────
